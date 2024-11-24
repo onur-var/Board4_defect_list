@@ -142,67 +142,57 @@ gapi.auth2.getAuthInstance().signIn().then(() => {
   }
 
   // Initialize GAPI Client
-  function initClient() {
-    gapi.client.init({
-      apiKey: API_KEY,
-      clientId: CLIENT_ID,
-      scope: SCOPES,
-      discoveryDocs: ['https://sheets.googleapis.com/$discovery/rest?version=v4'],
-    }).then(() => {
-      console.log('GAPI client initialized');
-      const authInstance = gapi.auth2.getAuthInstance();
-      if (authInstance.isSignedIn.get()) {
-        console.log('User is signed in');
-      } else {
-        authInstance.signIn().then(() => {
-          console.log('User signed in');
-        }).catch((error) => {
-          console.error('Sign-in error:', error);
-        });
-      }
-    }).catch(error => {
-      console.error("Error initializing GAPI client:", error);
-    });
-  }
-
-  // Call the onGapiLoaded function once the API script is loaded
-  if (typeof gapi !== 'undefined') {
-    onGapiLoaded();
-  }
-
-
-  // Call the onGapiLoaded function once the API script is loaded
-  if (typeof gapi !== 'undefined') {
-    onGapiLoaded();
-  }
-
-
-
-    // Tabloya yeni kayıt ekleme
-    addRecordButton.addEventListener("click", () => {
-      const ac = acInput.value.trim();
-      const defect = defectInput.value.trim();
-      const location = locationInput.value.trim();
-      const note = noteInput.value.trim();
-      const pn = pnInput.value.trim();
-
-      if (!ac || !defect || !location || !note || !pn) {
-        alert("Lütfen tüm alanları doldurun!");
-        return;
-      }
-
-      // Google Sheets'e kaydetme
-      gapi.client.sheets.spreadsheets.values.append({
-        spreadsheetId: SHEET_ID,
-        range: 'Sheet1!A:F',
-        valueInputOption: 'RAW',
-        resource: {
-          values: [[ac, defect, location, note, pn, '']]
-        }
-      }).then((response) => {
-        console.log('Data saved to Google Sheets');
+function initClient() {
+  gapi.client.init({
+    apiKey: API_KEY,
+    clientId: CLIENT_ID,
+    scope: SCOPES,
+    discoveryDocs: ['https://sheets.googleapis.com/$discovery/rest?version=v4'],
+  }).then(() => {
+    console.log('GAPI client initialized');
+    const authInstance = gapi.auth2.getAuthInstance();
+    if (authInstance.isSignedIn.get()) {
+      console.log('User is signed in');
+    } else {
+      authInstance.signIn().then(() => {
+        console.log('User signed in');
+        // Sign in successful, call append to Google Sheets
+        addDataToGoogleSheets();
+      }).catch((error) => {
+        console.error('Sign-in error:', error);
       });
+    }
+  }).catch(error => {
+    console.error("Error initializing GAPI client:", error);
+  });
+}
 
+function addDataToGoogleSheets() {
+  const ac = acInput.value.trim();
+  const defect = defectInput.value.trim();
+  const location = locationInput.value.trim();
+  const note = noteInput.value.trim();
+  const pn = pnInput.value.trim();
+
+  if (!ac || !defect || !location || !note || !pn) {
+    alert("Lütfen tüm alanları doldurun!");
+    return;
+  }
+
+gapi.client.sheets.spreadsheets.values.append({
+  spreadsheetId: SHEET_ID,
+  range: 'Sheet1!A:F',
+  valueInputOption: 'RAW',
+  resource: {
+    values: [[ac, defect, location, note, pn, '']]
+  }
+}).then(response => {
+  console.log('Data saved to Google Sheets:', response);
+}).catch(error => {
+  console.error('Error appending data:', error);
+  alert('Data saving failed: ' + error.message);
+});
+}
       // Yeni satır oluştur
       const row = document.createElement("tr");
 
