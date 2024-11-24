@@ -3,45 +3,18 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Defect List</title>
+  <title>Defect List Uygulaması</title>
   <style>
     body {
       font-family: Arial, sans-serif;
       margin: 20px;
-      background-color: #f4f4f9;
-    }
-    h1 {
-      text-align: center;
     }
     .input-container, .table-container {
       margin-bottom: 20px;
     }
-    input, button {
-      margin: 10px;
-      padding: 12px 18px;
-      font-size: 16px;
-      border-radius: 5px;
-      border: 1px solid #ccc;
-    }
-    input:focus, button:focus {
-      outline: none;
-      border-color: #007BFF;
-    }
-    .input-container input {
-      width: 200px;
-    }
-    button {
-      background-color: #007BFF;
-      color: white;
-      cursor: pointer;
-    }
-    button:hover {
-      background-color: #0056b3;
-    }
     table {
       width: 100%;
       border-collapse: collapse;
-      margin-top: 20px;
     }
     table, th, td {
       border: 1px solid #ddd;
@@ -50,22 +23,13 @@
       padding: 8px;
       text-align: center;
     }
-    th {
-      background-color: #f0f0f0;
-    }
-    .image-cell img {
-      width: 50px;
-      height: auto;
-    }
   </style>
-   <script src="https://apis.google.com/js/api.js"></script>
 </head>
 <body>
-
   <h1>Defect List Uygulaması</h1>
 
+  <!-- Üst kısım: Giriş alanları -->
   <div class="input-container">
-    <input type="text" id="ac" placeholder="A/C" />
     <input type="text" id="defect" placeholder="Arıza" />
     <input type="text" id="location" placeholder="Arıza Lokasyonu" />
     <input type="text" id="note" placeholder="Not" />
@@ -73,11 +37,11 @@
     <button id="addRecord">Ekle</button>
   </div>
 
+  <!-- Alt kısım: Tablo -->
   <div class="table-container">
     <table>
       <thead>
         <tr>
-          <th>A/C</th>
           <th>Arıza</th>
           <th>Arıza Lokasyonu</th>
           <th>Not</th>
@@ -85,13 +49,13 @@
           <th>Resim</th>
         </tr>
       </thead>
-      <tbody id="defectTableBody"></tbody>
+      <tbody id="defectTableBody">
+        <!-- Dinamik olarak doldurulacak -->
+      </tbody>
     </table>
   </div>
 
-  <button id="downloadPDF">PDF Olarak İndir</button>
-  <button id="downloadXLSX">XLSX Olarak İndir</button>
-
+  <!-- Kamera modalı -->
   <div id="cameraModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.8); justify-content: center; align-items: center;">
     <video id="cameraView" autoplay playsinline style="width: 80%; max-width: 500px;"></video>
     <button id="capture">Fotoğraf Çek</button>
@@ -99,12 +63,8 @@
     <canvas id="canvas" style="display: none;"></canvas>
   </div>
 
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.0/xlsx.full.min.js"></script>
-
   <script>
     const defectInput = document.getElementById("defect");
-    const acInput = document.getElementById("ac");
     const locationInput = document.getElementById("location");
     const noteInput = document.getElementById("note");
     const pnInput = document.getElementById("pn");
@@ -117,90 +77,32 @@
     const canvas = document.getElementById("canvas");
     const ctx = canvas.getContext("2d");
     let currentImageCell = null;
-    const records = [];
 
-    // Google Sheets bağlantısı ve veri kaydetme fonksiyonu
-    const SHEET_ID = '15-w5cSmMSq5vSon3PDpB0PYdAQxvQRpLfk14Tt54gs8';
-    const API_KEY = 'AIzaSyDltb5FbPvL9bLgj_GK4_DEDaPK0A7oM_g';
-    const CLIENT_ID = '347723096847-kts8cmj7v8hq6drrfk3n0n8qcdrc7j8i.apps.googleusercontent.com';
-    const SCOPES = 'https://www.googleapis.com/auth/spreadsheets';
-
-    gapi.load('client:auth2', initClient);
-
-    // Wait for the Google API client to load
-    function onGapiLoaded() {
-      console.log("Google API script loaded");
-
-      gapi.load('client:auth2', initClient);
-    }
-
-    // Initialize GAPI Client
-    function initClient() {
-      gapi.client.init({
-        apiKey: API_KEY,
-        clientId: CLIENT_ID,
-        scope: SCOPES,
-        discoveryDocs: ['https://sheets.googleapis.com/$discovery/rest?version=v4'],
-      }).then(() => {
-        console.log('GAPI client initialized');
-        const authInstance = gapi.auth2.getAuthInstance();
-        if (authInstance.isSignedIn.get()) {
-          console.log('User is signed in');
-        } else {
-          authInstance.signIn().then(() => {
-            console.log('User signed in');
-            // Sign in successful, call append to Google Sheets
-            addDataToGoogleSheets();
-          }).catch((error) => {
-            console.error('Sign-in error:', error);
-          });
-        }
-      }).catch(error => {
-        console.error("Error initializing GAPI client:", error);
-      });
-    }
-
-    function addDataToGoogleSheets() {
-      const ac = acInput.value.trim();
+    // Tabloya yeni kayıt ekleme
+    addRecordButton.addEventListener("click", () => {
       const defect = defectInput.value.trim();
       const location = locationInput.value.trim();
       const note = noteInput.value.trim();
       const pn = pnInput.value.trim();
 
-      if (!ac || !defect || !location || !note || !pn) {
+      if (!defect || !location || !note || !pn) {
         alert("Lütfen tüm alanları doldurun!");
         return;
       }
-
-      gapi.client.sheets.spreadsheets.values.append({
-        spreadsheetId: SHEET_ID,
-        range: 'Sheet1!A:F',
-        valueInputOption: 'RAW',
-        resource: {
-          values: [[ac, defect, location, note, pn, '']]
-        }
-      }).then(response => {
-        console.log('Data saved to Google Sheets:', response);
-      }).catch(error => {
-        console.error('Error appending data:', error);
-        alert('Data saving failed: ' + error.message);
-      });
 
       // Yeni satır oluştur
       const row = document.createElement("tr");
 
       // Veriler için hücreler ekle
       row.innerHTML = `
-        <td>${ac}</td>
         <td>${defect}</td>
         <td>${location}</td>
         <td>${note}</td>
         <td>${pn}</td>
-        <td class="image-cell"><button class="addImage">Resim Ekle</button></td>
+        <td><button class="addImage">Resim Ekle</button></td>
       `;
-      defectTableBody.appendChild(row);
 
-      records.push({ ac, defect, location, note, pn, image: null });
+      defectTableBody.appendChild(row);
 
       // Resim ekleme butonu için olay
       row.querySelector(".addImage").addEventListener("click", (e) => {
@@ -209,85 +111,51 @@
       });
 
       // Alanları temizle
-      acInput.value = "";
       defectInput.value = "";
       locationInput.value = "";
       noteInput.value = "";
       pnInput.value = "";
-    }
+    });
 
     // Kamera modalını aç
-    function openCamera() {
-      cameraModal.style.display = "flex";
-      // Arka kameraya erişim sağla
-      navigator.mediaDevices.getUserMedia({ 
-        video: { facingMode: "environment" } 
-      }).then((stream) => {
-        cameraView.srcObject = stream;
-      });
+navigator.mediaDevices.getUserMedia({
+  video: { facingMode: "environment" } // Arka kamerayı aç
+})
+  .then((stream) => {
+    cameraView.srcObject = stream;
+  })
+  .catch((error) => {
+    console.error("Kameraya erişim sağlanamadı:", error);
+  });
+
     }
+
+    // Kamera modalını kapat
+    function closeCamera() {
+      cameraModal.style.display = "none";
+      const stream = cameraView.srcObject;
+      if (stream) {
+        stream.getTracks().forEach((track) => track.stop());
+      }
+      cameraView.srcObject = null;
+    }
+
+    closeCameraButton.addEventListener("click", closeCamera);
 
     // Fotoğraf çek
     captureButton.addEventListener("click", () => {
-      const videoWidth = cameraView.videoWidth;
-      const videoHeight = cameraView.videoHeight;
-      canvas.width = videoWidth;
-      canvas.height = videoHeight;
-      ctx.drawImage(cameraView, 0, 0, videoWidth, videoHeight);
-      const dataUrl = canvas.toDataURL("image/png");
+      canvas.width = cameraView.videoWidth;
+      canvas.height = cameraView.videoHeight;
+      ctx.drawImage(cameraView, 0, 0, canvas.width, canvas.height);
+      const imageData = canvas.toDataURL("image/png");
 
-      // Resim hücresine ekle
-      currentImageCell.innerHTML = `<img src="${dataUrl}" alt="Defect Image" />`;
-
-      // Kamerayı kapat
-      const stream = cameraView.srcObject;
-      const tracks = stream.getTracks();
-      tracks.forEach(track => track.stop());
-      cameraModal.style.display = "none";
-    });
-
-    // Kamera modali kapat
-    closeCameraButton.addEventListener("click", () => {
-      const stream = cameraView.srcObject;
-      const tracks = stream.getTracks();
-      tracks.forEach(track => track.stop());
-      cameraModal.style.display = "none";
-    });
-
-    // Xls ve PDF indirme işlemleri
-    document.getElementById("downloadPDF").addEventListener("click", () => {
-      const doc = new jsPDF();
-      const table = defectTableBody;
-      const rows = [];
-      for (let i = 0; i < table.rows.length; i++) {
-        const row = table.rows[i];
-        const rowData = [];
-        for (let j = 0; j < row.cells.length - 1; j++) {  // exclude image cell
-          rowData.push(row.cells[j].textContent);
-        }
-        rows.push(rowData);
+      // Resmi tabloya ekle
+      if (currentImageCell) {
+        currentImageCell.innerHTML = `<img src="${imageData}" alt="Resim" style="width: 50px; height: auto;" />`;
       }
-      doc.autoTable({ head: [["A/C", "Arıza", "Arıza Lokasyonu", "Not", "P/N"]], body: rows });
-      doc.save('defect-list.pdf');
-    });
 
-    document.getElementById("downloadXLSX").addEventListener("click", () => {
-      const rows = [];
-      const table = defectTableBody;
-      for (let i = 0; i < table.rows.length; i++) {
-        const row = table.rows[i];
-        const rowData = [];
-        for (let j = 0; j < row.cells.length - 1; j++) {  // exclude image cell
-          rowData.push(row.cells[j].textContent);
-        }
-        rows.push(rowData);
-      }
-      const ws = XLSX.utils.aoa_to_sheet(rows);
-      const wb = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(wb, ws, "Defect List");
-      XLSX.writeFile(wb, "defect-list.xlsx");
+      closeCamera();
     });
   </script>
-
 </body>
 </html>
