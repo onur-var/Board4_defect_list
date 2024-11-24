@@ -118,15 +118,16 @@
     });
 
     // Kamera modalını aç
-navigator.mediaDevices.getUserMedia({
-  video: { deviceId: { exact: "KAMERA_ID" } } // Kullanıcının seçtiği kamera ID'si
-})
-  .then((stream) => {
-    cameraView.srcObject = stream;
-  })
-  .catch((error) => {
-    console.error("Kamera seçimi başarısız oldu:", error);
-  });
+    function openCamera() {
+      cameraModal.style.display = "flex";
+      navigator.mediaDevices.getUserMedia({ video: true })
+        .then((stream) => {
+          cameraView.srcObject = stream;
+        })
+        .catch((error) => {
+          console.error("Kameraya erişim sağlanamadı:", error);
+          closeCamera();
+        });
     }
 
     // Kamera modalını kapat
