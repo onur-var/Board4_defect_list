@@ -126,73 +126,65 @@
 
     gapi.load('client:auth2', initClient);
 
-gapi.auth2.getAuthInstance().signIn().then(() => {
-  console.log("User signed in.");
-}).catch((error) => {
-  console.error("Error signing in:", error);
-});
+    // Wait for the Google API client to load
+    function onGapiLoaded() {
+      console.log("Google API script loaded");
 
+      gapi.load('client:auth2', initClient);
+    }
 
-
-  // Wait for the Google API client to load
-  function onGapiLoaded() {
-    console.log("Google API script loaded");
-
-    gapi.load('client:auth2', initClient);
-  }
-
-  // Initialize GAPI Client
-function initClient() {
-  gapi.client.init({
-    apiKey: API_KEY,
-    clientId: CLIENT_ID,
-    scope: SCOPES,
-    discoveryDocs: ['https://sheets.googleapis.com/$discovery/rest?version=v4'],
-  }).then(() => {
-    console.log('GAPI client initialized');
-    const authInstance = gapi.auth2.getAuthInstance();
-    if (authInstance.isSignedIn.get()) {
-      console.log('User is signed in');
-    } else {
-      authInstance.signIn().then(() => {
-        console.log('User signed in');
-        // Sign in successful, call append to Google Sheets
-        addDataToGoogleSheets();
-      }).catch((error) => {
-        console.error('Sign-in error:', error);
+    // Initialize GAPI Client
+    function initClient() {
+      gapi.client.init({
+        apiKey: API_KEY,
+        clientId: CLIENT_ID,
+        scope: SCOPES,
+        discoveryDocs: ['https://sheets.googleapis.com/$discovery/rest?version=v4'],
+      }).then(() => {
+        console.log('GAPI client initialized');
+        const authInstance = gapi.auth2.getAuthInstance();
+        if (authInstance.isSignedIn.get()) {
+          console.log('User is signed in');
+        } else {
+          authInstance.signIn().then(() => {
+            console.log('User signed in');
+            // Sign in successful, call append to Google Sheets
+            addDataToGoogleSheets();
+          }).catch((error) => {
+            console.error('Sign-in error:', error);
+          });
+        }
+      }).catch(error => {
+        console.error("Error initializing GAPI client:", error);
       });
     }
-  }).catch(error => {
-    console.error("Error initializing GAPI client:", error);
-  });
-}
 
-function addDataToGoogleSheets() {
-  const ac = acInput.value.trim();
-  const defect = defectInput.value.trim();
-  const location = locationInput.value.trim();
-  const note = noteInput.value.trim();
-  const pn = pnInput.value.trim();
+    function addDataToGoogleSheets() {
+      const ac = acInput.value.trim();
+      const defect = defectInput.value.trim();
+      const location = locationInput.value.trim();
+      const note = noteInput.value.trim();
+      const pn = pnInput.value.trim();
 
-  if (!ac || !defect || !location || !note || !pn) {
-    alert("Lütfen tüm alanları doldurun!");
-    return;
-  }
+      if (!ac || !defect || !location || !note || !pn) {
+        alert("Lütfen tüm alanları doldurun!");
+        return;
+      }
 
-gapi.client.sheets.spreadsheets.values.append({
-  spreadsheetId: SHEET_ID,
-  range: 'Sheet1!A:F',
-  valueInputOption: 'RAW',
-  resource: {
-    values: [[ac, defect, location, note, pn, '']]
-  }
-}).then(response => {
-  console.log('Data saved to Google Sheets:', response);
-}).catch(error => {
-  console.error('Error appending data:', error);
-  alert('Data saving failed: ' + error.message);
-});
-}
+      gapi.client.sheets.spreadsheets.values.append({
+        spreadsheetId: SHEET_ID,
+        range: 'Sheet1!A:F',
+        valueInputOption: 'RAW',
+        resource: {
+          values: [[ac, defect, location, note, pn, '']]
+        }
+      }).then(response => {
+        console.log('Data saved to Google Sheets:', response);
+      }).catch(error => {
+        console.error('Error appending data:', error);
+        alert('Data saving failed: ' + error.message);
+      });
+
       // Yeni satır oluştur
       const row = document.createElement("tr");
 
@@ -221,7 +213,7 @@ gapi.client.sheets.spreadsheets.values.append({
       locationInput.value = "";
       noteInput.value = "";
       pnInput.value = "";
-    });
+    }
 
     // Kamera modalını aç
     function openCamera() {
@@ -241,66 +233,60 @@ gapi.client.sheets.spreadsheets.values.append({
       canvas.width = videoWidth;
       canvas.height = videoHeight;
       ctx.drawImage(cameraView, 0, 0, videoWidth, videoHeight);
-      const imageData = canvas.toDataURL("image/png");
-      
-      // Resmi hücreye ekle
-      currentImageCell.innerHTML = `<img src="${imageData}" alt="Defect Image" />`;
-      records.find(record => record.ac === acInput.value.trim()).image = imageData;
+      const dataUrl = canvas.toDataURL("image/png");
 
-      closeCamera();
-    });
+      // Resim hücresine ekle
+      currentImageCell.innerHTML = `<img src="${dataUrl}" alt="Defect Image" />`;
 
-    // Kamera modalını kapat
-    closeCameraButton.addEventListener("click", () => {
-      closeCamera();
-    });
-
-    function closeCamera() {
+      // Kamerayı kapat
+      const stream = cameraView.srcObject;
+      const tracks = stream.getTracks();
+      tracks.forEach(track => track.stop());
       cameraModal.style.display = "none";
-      cameraView.srcObject.getTracks().forEach(track => track.stop());
-    }
-
-    // PDF indirme
-    document.getElementById("downloadPDF").addEventListener("click", () => {
-      const { jsPDF } = window.jspdf;
-      const doc = new jsPDF();
-      let y = 10;
-
-      records.forEach(record => {
-        doc.text(`A/C: ${record.ac}`, 10, y);
-        doc.text(`Arıza: ${record.defect}`, 10, y + 10);
-        doc.text(`Lokasyon: ${record.location}`, 10, y + 20);
-        doc.text(`Not: ${record.note}`, 10, y + 30);
-        doc.text(`P/N: ${record.pn}`, 10, y + 40);
-
-        if (record.image) {
-          doc.addImage(record.image, "PNG", 10, y + 50, 50, 50);
-          y += 60;
-        }
-
-        y += 70; // Sonraki kayda geç
-      });
-
-      doc.save("defect-list.pdf");
     });
 
-    // XLSX indirme
+    // Kamera modali kapat
+    closeCameraButton.addEventListener("click", () => {
+      const stream = cameraView.srcObject;
+      const tracks = stream.getTracks();
+      tracks.forEach(track => track.stop());
+      cameraModal.style.display = "none";
+    });
+
+    // Xls ve PDF indirme işlemleri
+    document.getElementById("downloadPDF").addEventListener("click", () => {
+      const doc = new jsPDF();
+      const table = defectTableBody;
+      const rows = [];
+      for (let i = 0; i < table.rows.length; i++) {
+        const row = table.rows[i];
+        const rowData = [];
+        for (let j = 0; j < row.cells.length - 1; j++) {  // exclude image cell
+          rowData.push(row.cells[j].textContent);
+        }
+        rows.push(rowData);
+      }
+      doc.autoTable({ head: [["A/C", "Arıza", "Arıza Lokasyonu", "Not", "P/N"]], body: rows });
+      doc.save('defect-list.pdf');
+    });
+
     document.getElementById("downloadXLSX").addEventListener("click", () => {
-      const ws_data = records.map(record => [
-        record.ac,
-        record.defect,
-        record.location,
-        record.note,
-        record.pn,
-        record.image || ''
-      ]);
-
-      const ws = XLSX.utils.aoa_to_sheet(ws_data);
+      const rows = [];
+      const table = defectTableBody;
+      for (let i = 0; i < table.rows.length; i++) {
+        const row = table.rows[i];
+        const rowData = [];
+        for (let j = 0; j < row.cells.length - 1; j++) {  // exclude image cell
+          rowData.push(row.cells[j].textContent);
+        }
+        rows.push(rowData);
+      }
+      const ws = XLSX.utils.aoa_to_sheet(rows);
       const wb = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(wb, ws, "Defect Listesi");
-
+      XLSX.utils.book_append_sheet(wb, ws, "Defect List");
       XLSX.writeFile(wb, "defect-list.xlsx");
     });
   </script>
+
 </body>
 </html>
