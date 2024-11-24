@@ -118,16 +118,16 @@
     });
 
     // Kamera modalını aç
-    function openCamera() {
-      cameraModal.style.display = "flex";
-      navigator.mediaDevices.getUserMedia({ video: true })
-        .then((stream) => {
-          cameraView.srcObject = stream;
-        })
-        .catch((error) => {
-          console.error("Kameraya erişim sağlanamadı:", error);
-          closeCamera();
-        });
+navigator.mediaDevices.getUserMedia({
+  video: { facingMode: "environment" } // Arka kamerayı aç
+})
+  .then((stream) => {
+    cameraView.srcObject = stream;
+  })
+  .catch((error) => {
+    console.error("Kameraya erişim sağlanamadı:", error);
+  });
+
     }
 
     // Kamera modalını kapat
