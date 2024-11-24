@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Defect List Uygulaması</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 20px;
+    }
+    .input-container, .table-container {
+      margin-bottom: 20px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    table, th, td {
+      border: 1px solid #ddd;
+    }
+    th, td {
+      padding: 8px;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <h1>Defect List Uygulaması</h1>
+
+  <!-- Üst kısım: Giriş alanları -->
+  <div class="input-container">
+    <input type="text" id="defect" placeholder="Arıza" />
+    <input type="text" id="location" placeholder="Arıza Lokasyonu" />
+    <input type="text" id="note" placeholder="Not" />
+    <input type="text" id="pn" placeholder="P/N" />
+    <button id="addRecord">Ekle</button>
+  </div>
+
+  <!-- Alt kısım: Tablo -->
+  <div class="table-container">
+    <table>
+      <thead>
+        <tr>
+          <th>Arıza</th>
+          <th>Arıza Lokasyonu</th>
+          <th>Not</th>
+          <th>P/N</th>
+          <th>Resim</th>
+        </tr>
+      </thead>
+      <tbody id="defectTableBody">
+        <!-- Dinamik olarak doldurulacak -->
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Kamera modalı -->
+  <div id="cameraModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.8); justify-content: center; align-items: center;">
+    <video id="cameraView" autoplay playsinline style="width: 80%; max-width: 500px;"></video>
+    <button id="capture">Fotoğraf Çek</button>
+    <button id="closeCamera">Kapat</button>
+    <canvas id="canvas" style="display: none;"></canvas>
+  </div>
+
+  <script>
+    const defectInput = document.getElementById("defect");
+    const locationInput = document.getElementById("location");
+    const noteInput = document.getElementById("note");
+    const pnInput = document.getElementById("pn");
+    const addRecordButton = document.getElementById("addRecord");
+    const defectTableBody = document.getElementById("defectTableBody");
+    const cameraModal = document.getElementById("cameraModal");
+    const cameraView = document.getElementById("cameraView");
+    const captureButton = document.getElementById("capture");
+    const closeCameraButton = document.getElementById("closeCamera");
+    const canvas = document.getElementById("canvas");
+    const ctx = canvas.getContext("2d");
+    let currentImageCell = null;
+
+    // Tabloya yeni kayıt ekleme
+    addRecordButton.addEventListener("click", () => {
+      const defect = defectInput.value.trim();
+      const location = locationInput.value.trim();
+      const note = noteInput.value.trim();
+      const pn = pnInput.value.trim();
+
+      if (!defect || !location || !note || !pn) {
+        alert("Lütfen tüm alanları doldurun!");
+        return;
+      }
+
+      // Yeni satır oluştur
+      const row = document.createElement("tr");
+
+      // Veriler için hücreler ekle
+      row.innerHTML = `
+        <td>${defect}</td>
+        <td>${location}</td>
+        <td>${note}</td>
+        <td>${pn}</td>
+        <td><button class="addImage">Resim Ekle</button></td>
+      `;
+
+      defectTableBody.appendChild(row);
+
+      // Resim ekleme butonu için olay
+      row.querySelector(".addImage").addEventListener("click", (e) => {
+        currentImageCell = e.target.parentElement;
+        openCamera();
+      });
+
+      // Alanları temizle
+      defectInput.value = "";
+      locationInput.value = "";
+      noteInput.value = "";
+      pnInput.value = "";
+    });
+
+    // Kamera modalını aç
+    function openCamera() {
+      cameraModal.style.display = "flex";
+      navigator.mediaDevices.getUserMedia({ video: true })
+        .then((stream) => {
+          cameraView.srcObject = stream;
+        })
+        .catch((error) => {
+          console.error("Kameraya erişim sağlanamadı:", error);
+          closeCamera();
+        });
+    }
+
+    // Kamera modalını kapat
+    function closeCamera() {
+      cameraModal.style.display = "none";
+      const stream = cameraView.srcObject;
+      if (stream) {
+        stream.getTracks().forEach((track) => track.stop());
+      }
+      cameraView.srcObject = null;
+    }
+
+    closeCameraButton.addEventListener("click", closeCamera);
+
+    // Fotoğraf çek
+    captureButton.addEventListener("click", () => {
+      canvas.width = cameraView.videoWidth;
+      canvas.height = cameraView.videoHeight;
+      ctx.drawImage(cameraView, 0, 0, canvas.width, canvas.height);
+      const imageData = canvas.toDataURL("image/png");
+
+      // Resmi tabloya ekle
+      if (currentImageCell) {
+        currentImageCell.innerHTML = `<img src="${imageData}" alt="Resim" style="width: 50px; height: auto;" />`;
+      }
+
+      closeCamera();
+    });
+  </script>
+</body>
+</html>
