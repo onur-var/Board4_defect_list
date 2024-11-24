@@ -119,15 +119,14 @@
 
     // Kamera modalını aç
 navigator.mediaDevices.getUserMedia({
-  video: { facingMode: "environment" } // Arka kamerayı aç
+  video: { deviceId: { exact: "KAMERA_ID" } } // Kullanıcının seçtiği kamera ID'si
 })
   .then((stream) => {
     cameraView.srcObject = stream;
   })
   .catch((error) => {
-    console.error("Kameraya erişim sağlanamadı:", error);
+    console.error("Kamera seçimi başarısız oldu:", error);
   });
-
     }
 
     // Kamera modalını kapat
