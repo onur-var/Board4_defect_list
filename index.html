@@ -8,13 +8,41 @@
     body {
       font-family: Arial, sans-serif;
       margin: 20px;
+      background-color: #f4f4f9;
+    }
+    h1 {
+      text-align: center;
+      color: #333;
     }
     .input-container, .table-container {
       margin-bottom: 20px;
     }
+    input, button {
+      margin: 10px;
+      padding: 12px 18px;
+      font-size: 16px;
+      border-radius: 5px;
+      border: 1px solid #ccc;
+    }
+    input:focus, button:focus {
+      outline: none;
+      border-color: #007BFF;
+    }
+    .input-container input {
+      width: 200px;
+    }
+    button {
+      background-color: #007BFF;
+      color: white;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #0056b3;
+    }
     table {
       width: 100%;
       border-collapse: collapse;
+      margin-top: 20px;
     }
     table, th, td {
       border: 1px solid #ddd;
@@ -23,12 +51,19 @@
       padding: 8px;
       text-align: center;
     }
+    th {
+      background-color: #f0f0f0;
+    }
+    .image-cell img {
+      width: 50px;
+      height: auto;
+    }
   </style>
 </head>
 <body>
+
   <h1>Defect List Uygulaması</h1>
 
-  <!-- Üst kısım: Giriş alanları -->
   <div class="input-container">
     <input type="text" id="defect" placeholder="Arıza" />
     <input type="text" id="location" placeholder="Arıza Lokasyonu" />
@@ -37,7 +72,6 @@
     <button id="addRecord">Ekle</button>
   </div>
 
-  <!-- Alt kısım: Tablo -->
   <div class="table-container">
     <table>
       <thead>
@@ -49,19 +83,22 @@
           <th>Resim</th>
         </tr>
       </thead>
-      <tbody id="defectTableBody">
-        <!-- Dinamik olarak doldurulacak -->
-      </tbody>
+      <tbody id="defectTableBody"></tbody>
     </table>
   </div>
 
-  <!-- Kamera modalı -->
+  <button id="downloadPDF">PDF Olarak İndir</button>
+  <button id="downloadXLSX">XLSX Olarak İndir</button>
+
   <div id="cameraModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.8); justify-content: center; align-items: center;">
     <video id="cameraView" autoplay playsinline style="width: 80%; max-width: 500px;"></video>
     <button id="capture">Fotoğraf Çek</button>
     <button id="closeCamera">Kapat</button>
     <canvas id="canvas" style="display: none;"></canvas>
   </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.0/xlsx.full.min.js"></script>
 
   <script>
     const defectInput = document.getElementById("defect");
@@ -77,6 +114,7 @@
     const canvas = document.getElementById("canvas");
     const ctx = canvas.getContext("2d");
     let currentImageCell = null;
+    const records = [];
 
     // Tabloya yeni kayıt ekleme
     addRecordButton.addEventListener("click", () => {
@@ -99,10 +137,11 @@
         <td>${location}</td>
         <td>${note}</td>
         <td>${pn}</td>
-        <td><button class="addImage">Resim Ekle</button></td>
+        <td class="image-cell"><button class="addImage">Resim Ekle</button></td>
       `;
-
       defectTableBody.appendChild(row);
+
+      records.push({ defect, location, note, pn, image: null });
 
       // Resim ekleme butonu için olay
       row.querySelector(".addImage").addEventListener("click", (e) => {
@@ -155,10 +194,56 @@
       // Resmi tabloya ekle
       if (currentImageCell) {
         currentImageCell.innerHTML = `<img src="${imageData}" alt="Resim" style="width: 50px; height: auto;" />`;
+        const recordIndex = Array.from(defectTableBody.children).indexOf(currentImageCell.parentElement);
+        records[recordIndex].image = imageData;
       }
 
       closeCamera();
     });
+
+    // PDF çıktısı almak için
+    document.getElementById("downloadPDF").addEventListener("click", () => {
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF();
+      let y = 20;
+      
+      doc.text("Defect Listesi", 14, y);
+      y += 10;
+
+      records.forEach(record => {
+        doc.text(`Arıza: ${record.defect}`, 14, y);
+        doc.text(`Lokasyon: ${record.location}`, 14, y + 10);
+        doc.text(`Not: ${record.note}`, 14, y + 20);
+        doc.text(`P/N: ${record.pn}`, 14, y + 30);
+
+        if (record.image) {
+          doc.addImage(record.image, "PNG", 14, y + 40, 50, 50);
+          y += 60; // Resim ekledikçe y'yi artır
+        }
+
+        y += 70; // Sonraki kayda geç
+      });
+
+      doc.save("defect-list.pdf");
+    });
+
+    // XLSX çıktısı almak için
+    document.getElementById("downloadXLSX").addEventListener("click", () => {
+      const ws_data = records.map(record => [
+        record.defect,
+        record.location,
+        record.note,
+        record.pn,
+        record.image || ''
+      ]);
+
+      const ws = XLSX.utils.aoa_to_sheet(ws_data);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "Defect Listesi");
+
+      XLSX.writeFile(wb, "defect-list.xlsx");
+    });
   </script>
+
 </body>
 </html>
